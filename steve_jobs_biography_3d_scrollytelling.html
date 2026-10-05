@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Steve Jobs — Interactive 3D Biography</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            ink: '#111112',
+            paper: '#f3f3f1',
+            accent: {
+              orange: '#ff6b00',
+              silver: '#e0e0e0',
+              glow: '#ff8533'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            display: ['SF Pro Display', 'Inter', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Three.js & GSAP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+  <style>
+    body {
+      background-color: #111112;
+      color: #f3f3f1;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Depth Layering for Sandwich Effect */
+    .bg-year-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: clamp(8rem, 25vw, 24rem);
+      font-weight: 900;
+      color: rgba(243, 243, 241, 0.035);
+      letter-spacing: -0.05em;
+      user-select: none;
+      pointer-events: none;
+      z-index: 10;
+      line-height: 0.8;
+      transition: opacity 0.4s ease;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    #webgl-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .slide-content-layer {
+      position: relative;
+      z-index: 30;
+      pointer-events: auto;
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #111112;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2a2a2e;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #ff6b00;
+    }
+
+    /* Scramble Text Monospace Feel */
+    .scramble-text {
+      display: inline-block;
+      font-feature-settings: "tnum";
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-accent-orange selection:text-ink">
+
+  <!-- WebGL 3D Canvas Layer -->
+  <div id="webgl-container"></div>
+
+  <!-- Top Bar Navigation -->
+  <header class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-5 md:px-12 backdrop-blur-md bg-ink/40 border-b border-white/5">
+    <div class="flex items-center space-x-3">
+      <div class="w-8 h-8 rounded-full bg-accent-orange/20 border border-accent-orange flex items-center justify-center text-accent-orange font-bold text-sm">
+        <i class="fa-brands fa-apple"></i>
+      </div>
+      <span class="font-bold tracking-wider uppercase text-xs md:text-sm text-paper">Steve Jobs</span>
+    </div>
+
+    <!-- Slide Indicators -->
+    <nav class="hidden md:flex items-center space-x-6 text-xs tracking-widest uppercase font-medium text-paper/50">
+      <a href="#slide-1" class="nav-item hover:text-accent-orange transition-colors duration-200" data-slide="0">1976</a>
+      <a href="#slide-2" class="nav-item hover:text-accent-orange transition-colors duration-200" data-slide="1">1984</a>
+      <a href="#slide-3" class="nav-item hover:text-accent-orange transition-colors duration-200" data-slide="2">1997</a>
+      <a href="#slide-4" class="nav-item hover:text-accent-orange transition-colors duration-200" data-slide="3">2007</a>
+      <a href="#slide-5" class="nav-item hover:text-accent-orange transition-colors duration-200" data-slide="4">Legacy</a>
+    </nav>
+
+    <!-- Scroll Indicator -->
+    <div class="text-xs text-paper/40 flex items-center space-x-2">
+      <span class="hidden sm:inline">SCROLL TO EXPLORE</span>
+      <i class="fa-solid fa-arrow-down animate-bounce text-accent-orange"></i>
+    </div>
+  </header>
+
+  <!-- Progress Bar -->
+  <div class="fixed top-0 left-0 h-[2px] bg-accent-orange z-50 transition-all duration-150" id="progress-bar" style="width: 0%;"></div>
+
+  <!-- Main Scrollytelling Container -->
+  <main class="relative w-full">
+
+    <!-- SLIDE 1: 1976 -->
+    <section id="slide-1" class="relative w-full h-screen flex items-center justify-center px-6 md:px-20 overflow-hidden snap-start">
+      <div class="bg-year-text">1976</div>
+      
+      <div class="slide-content-layer max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+        <div class="space-y-6">
+          <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-accent-orange/10 border border-accent-orange/30 text-accent-orange text-xs font-semibold tracking-widest uppercase">
+            <span>Chapter I</span>
+            <span>•</span>
+            <span>The Garage Era</span>
+          </div>
+          
+          <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-paper leading-tight">
+            Thành Lập Apple &<br>
+            <span class="scramble-text text-transparent bg-clip-text bg-gradient-to-r from-accent-orange to-accent-silver" data-value="Căn Gác Xép Garage">Căn Gác Xép Garage</span>
+          </h1>
+
+          <p class="text-paper/70 text-sm sm:text-base leading-relaxed max-w-md">
+            Steve Jobs cùng Steve Wozniak đặt nền móng đầu tiên cho đế chế Apple tại gara gia đình ở Los Altos, California. Với chiếc máy Apple I, họ đã định nghĩa lại khái niệm máy tính cá nhân.
+          </p>
+
+          <div class="pt-2 flex items-center space-x-4">
+            <div class="glass-card px-4 py-3 rounded-xl border border-white/10 text-xs">
+              <span class="text-accent-orange font-bold block text-sm">Apple I</span>
+              <span class="text-paper/50">4KB RAM • $666.66</span>
+            </div>
+            <div class="glass-card px-4 py-3 rounded-xl border border-white/10 text-xs">
+              <span class="text-accent-orange font-bold block text-sm">Địa Điểm</span>
+              <span class="text-paper/50">Gara Nhà Jobs</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: 1984 -->
+    <section id="slide-2" class="relative w-full h-screen flex items-center justify-center px-6 md:px-20 overflow-hidden snap-start">
+      <div class="bg-year-text">1984</div>
+
+      <div class="slide-content-layer max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+        <div class="md:col-start-2 space-y-6">
+          <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-accent-orange/10 border border-accent-orange/30 text-accent-orange text-xs font-semibold tracking-widest uppercase">
+            <span>Chapter II</span>
+            <span>•</span>
+            <span>Revolution & Exile</span>
+          </div>
+
+          <h2 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-paper leading-tight">
+            Ra Mắt Macintosh<br>
+            <span class="scramble-text text-accent-orange" data-value="& Bi Kịch Sa Thải">& Bi Kịch Sa Thải</span>
+          </h2>
+
+          <p class="text-paper/70 text-sm sm:text-base leading-relaxed max-w-md">
+            Với màn giới thiệu kinh điển năm 1984, Macintosh ra đời mang theo giao diện đồ họa GUI và chuột máy tính. Nhưng mâu thuẫn nội bộ đã đẩy Steve Jobs rời khỏi công ty do chính mình sáng lập vào năm 1985.
+          </p>
+
+          <div class="glass-card p-4 rounded-xl border border-white/10 text-xs italic text-paper/80 border-l-2 border-l-accent-orange">
+            "Sự cay đắng khi bị sa thải sau đó đã biến thành sự tự do ngọt ngào nhất để bắt đầu một trong những giai đoạn sáng tạo nhất đời tôi."
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: 1997 -->
+    <section id="slide-3" class="relative w-full h-screen flex items-center justify-center px-6 md:px-20 overflow-hidden snap-start">
+      <div class="bg-year-text">1997</div>
+
+      <div class="slide-content-layer max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+        <div class="space-y-6">
+          <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-accent-orange/10 border border-accent-orange/30 text-accent-orange text-xs font-semibold tracking-widest uppercase">
+            <span>Chapter III</span>
+            <span>•</span>
+            <span>The Renaissance</span>
+          </div>
+
+          <h2 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-paper leading-tight">
+            Trở Lại Apple &<br>
+            <span class="scramble-text text-accent-silver" data-value="Think Different">"Think Different"</span>
+          </h2>
+
+          <p class="text-paper/70 text-sm sm:text-base leading-relaxed max-w-md">
+            Apple trên bờ vực phá sản. Steve Jobs quay trở lại, tái cấu trúc toàn bộ dòng sản phẩm và khởi động chiến dịch huyền thoại "Think Different", cùng chiếc iMac G3 trong suốt rực rỡ sắc màu.
+          </p>
+
+          <ul class="space-y-2 text-xs sm:text-sm text-paper/80">
+            <li class="flex items-center space-x-2">
+              <i class="fa-solid fa-check text-accent-orange"></i>
+              <span>Sáp nhập NeXT & Hệ điều hành OS X</span>
+            </li>
+            <li class="flex items-center space-x-2">
+              <i class="fa-solid fa-check text-accent-orange"></i>
+              <span>Ra mắt iMac G3 đột phá thiết kế</span>
+            </li>
+            <li class="flex items-center space-x-2">
+              <i class="fa-solid fa-check text-accent-orange"></i>
+              <span>Vực dậy Apple trở lại hoàng kim</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: 2007 -->
+    <section id="slide-4" class="relative w-full h-screen flex items-center justify-center px-6 md:px-20 overflow-hidden snap-start">
+      <div class="bg-year-text">2007</div>
+
+      <div class="slide-content-layer max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+        <div class="md:col-start-2 space-y-6">
+          <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-accent-orange/10 border border-accent-orange/30 text-accent-orange text-xs font-semibold tracking-widest uppercase">
+            <span>Chapter IV</span>
+            <span>•</span>
+            <span>The iPhone Era</span>
+          </div>
+
+          <h2 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-paper leading-tight">
+            Định Hình Thế Giới<br>
+            <span class="scramble-text text-accent-orange" data-value="Với iPhone 2007">Với iPhone 2007</span>
+          </h2>
+
+          <p class="text-paper/70 text-sm sm:text-base leading-relaxed max-w-md">
+            "Một iPod màn hình rộng có cảm ứng. Một điện thoại di động cách mạng. Một thiết bị truyền thông Internet." Ba trong một — chiếc iPhone đầu tiên đã thay đổi vĩnh viễn ngành công nghệ loài người.
+          </p>
+
+          <div class="glass-card p-4 rounded-xl border border-white/10 space-y-2">
+            <div class="flex justify-between text-xs text-paper/60">
+              <span>EXPLODED VIEW EFFECT</span>
+              <span class="text-accent-orange font-mono">CUỘN CHUỘT ĐỂ BÓC TÁCH</span>
+            </div>
+            <div class="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
+              <div id="explode-progress" class="bg-accent-orange h-full w-0 transition-all duration-200"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: LEGACY -->
+    <section id="slide-5" class="relative w-full h-screen flex items-center justify-center px-6 md:px-20 overflow-hidden snap-start">
+      <div class="bg-year-text">LEGACY</div>
+
+      <div class="slide-content-layer max-w-3xl w-full text-center space-y-8">
+        <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-accent-orange/10 border border-accent-orange/30 text-accent-orange text-xs font-semibold tracking-widest uppercase">
+          <span>Chapter V</span>
+          <span>•</span>
+          <span>Immortal Legacy</span>
+        </div>
+
+        <h2 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-paper leading-tight">
+          Di Sản & Những Câu Nói<br>
+          <span class="scramble-text text-transparent bg-clip-text bg-gradient-to-r from-accent-orange via-paper to-accent-silver" data-value="Bất Hủ Của Steve Jobs">Bất Hủ Của Steve Jobs</span>
+        </h2>
+
+        <!-- Interactive Quote Switcher -->
+        <div id="quote-card" class="glass-card p-8 rounded-2xl border border-white/10 text-left relative overflow-hidden transition-all duration-300">
+          <div class="text-3xl text-accent-orange/30 absolute top-4 left-4"><i class="fa-solid fa-quote-left"></i></div>
+          <p id="quote-text" class="text-lg sm:text-xl font-medium text-paper leading-relaxed relative z-10 pl-6 border-l-2 border-accent-orange">
+            "Stay Hungry, Stay Foolish."
+          </p>
+          <div class="mt-4 text-xs text-paper/50 pl-6 flex justify-between items-center">
+            <span id="quote-author">— Stanford Commencement Speech, 2005</span>
+            <button id="next-quote-btn" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-accent-orange hover:text-ink text-paper font-semibold transition-all text-xs flex items-center space-x-2">
+              <span>Đổi câu nói</span>
+              <i class="fa-solid fa-rotate text-[10px]"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="pt-4 flex justify-center space-x-6 text-sm text-paper/60">
+          <div class="flex items-center space-x-2">
+            <span class="w-2 h-2 rounded-full bg-accent-orange"></span>
+            <span>1955 - 2011</span>
+          </div>
+          <div>•</div>
+          <div>Co-founder of Apple, NeXT, Pixar</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // --- 1. THREE.JS INITIALIZATION ---
+    const container = document.getElementById('webgl-container');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x111112, 0.035);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 0, 8);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+    container.appendChild(renderer.domElement);
+
+    // --- LIGHTING FIRST PRINCIPLE ---
+    // Key directional light from top-left
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
+    keyLight.position.set(-6, 8, 5);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.width = 2048;
+    keyLight.shadow.mapSize.height = 2048;
+    keyLight.shadow.camera.near = 0.5;
+    keyLight.shadow.camera.far = 25;
+    keyLight.shadow.bias = -0.0005;
+    scene.add(keyLight);
+
+    // Rear Rim Light (Accent Orange / Silver highlight)
+    const rimLight = new THREE.DirectionalLight(0xff6b00, 3.0);
+    rimLight.position.set(6, -4, -6);
+    scene.add(rimLight);
+
+    // Soft Fill light (no flat ambient)
+    const fillLight = new THREE.DirectionalLight(0x404050, 0.6);
+    fillLight.position.set(5, 2, 4);
+    scene.add(fillLight);
+
+    // --- 2. PROCEDURAL 3D MODELS CREATION ---
+    const mainGroup = new THREE.Group();
+    scene.add(mainGroup);
+
+    // MODEL 1: Apple I / Garage Retro Board (1976)
+    const createApple1Model = () => {
+      const group = new THREE.Group();
+      
+      // Wooden Enclosure Box
+      const woodMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.6, metalness: 0.1 });
+      const woodBox = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.4, 2.2), woodMat);
+      woodBox.position.y = -0.2;
+      woodBox.castShadow = true;
+      woodBox.receiveShadow = true;
+      group.add(woodBox);
+
+      // Green PCB Circuit Board
+      const pcbMat = new THREE.MeshStandardMaterial({ color: 0x115522, roughness: 0.3, metalness: 0.4 });
+      const pcb = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.08, 1.8), pcbMat);
+      pcb.position.y = 0.05;
+      pcb.castShadow = true;
+      group.add(pcb);
+
+      // Microchips on PCB
+      const chipMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.2, metalness: 0.8 });
+      for (let i = -1.1; i <= 1.1; i += 0.4) {
+        for (let j = -0.6; j <= 0.6; j += 0.4) {
+          const chip = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.08, 0.2), chipMat);
+          chip.position.set(i, 0.12, j);
+          chip.castShadow = true;
+          group.add(chip);
+        }
+      }
+
+      return group;
+    };
+
+    // MODEL 2: Macintosh 128K (1984)
+    const createMac128kModel = () => {
+      const group = new THREE.Group();
+      const beigeMat = new THREE.MeshStandardMaterial({ color: 0xd8d3c4, roughness: 0.4, metalness: 0.1 });
+      
+      // Main Chassis
+      const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.8, 2.0), beigeMat);
+      body.castShadow = true;
+      body.receiveShadow = true;
+      group.add(body);
+
+      // Beveled Front Facet
+      const screenBezel = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.6, 0.2), beigeMat);
+      screenBezel.position.set(0, 0.4, 1.02);
+      group.add(screenBezel);
+
+      // CRT Screen
+      const screenMat = new THREE.MeshStandardMaterial({ 
+        color: 0x111115, 
+        emissive: 0x224433, 
+        emissiveIntensity: 0.6,
+        roughness: 0.1 
+      });
+      const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.2), screenMat);
+      screen.position.set(0, 0.4, 1.13);
+      group.add(screen);
+
+      // Floppy Drive Slot
+      const slotMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
+      const slot = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.06, 0.1), slotMat);
+      slot.position.set(0, -0.6, 1.02);
+      group.add(slot);
+
+      // Rainbow Logo Accent
+      const logoMat = new THREE.MeshStandardMaterial({ color: 0xff6b00, roughness: 0.3 });
+      const logo = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.02), logoMat);
+      logo.position.set(-0.7, -0.6, 1.03);
+      group.add(logo);
+
+      return group;
+    };
+
+    // MODEL 3: iMac G3 Bondai Blue (1997)
+    const createIMacG3Model = () => {
+      const group = new THREE.Group();
+      
+      // Translucent Teal/Blue Shell
+      const shellMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0x008080, 
+        transparent: true, 
+        opacity: 0.75, 
+        roughness: 0.2, 
+        transmission: 0.8, 
+        ior: 1.4 
+      });
+      const shell = new THREE.Mesh(new THREE.SphereGeometry(1.6, 32, 32), shellMat);
+      shell.scale.set(1, 0.95, 1.1);
+      shell.castShadow = true;
+      group.add(shell);
+
+      // White Inner Frame
+      const innerMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.3 });
+      const innerCore = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.6, 1.4), innerMat);
+      innerCore.position.z = 0.1;
+      group.add(innerCore);
+
+      // Curved Screen Front
+      const screenMat = new THREE.MeshStandardMaterial({ color: 0x050508, roughness: 0.1, emissive: 0x112233 });
+      const screen = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.5, 0.1), screenMat);
+      screen.position.set(0, 0.1, 0.82);
+      group.add(screen);
+
+      return group;
+    };
+
+    // MODEL 4: iPhone 2007 Exploded View (2007)
+    const iPhoneComponents = [];
+    const createIPhoneModel = () => {
+      const group = new THREE.Group();
+
+      // Materials
+      const glassMat = new THREE.MeshPhysicalMaterial({ color: 0x050505, roughness: 0.1, metalness: 0.9, clearcoat: 1.0 });
+      const aluminumMat = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.95, roughness: 0.25 });
+      const plasticMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.6 });
+      const circuitMat = new THREE.MeshStandardMaterial({ color: 0x224422, roughness: 0.4 });
+      const batteryMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.5 });
+
+      // Component 1: Front Glass & Display
+      const frontGlass = new THREE.Mesh(new THREE.BoxGeometry(1.6, 3.2, 0.05), glassMat);
+      frontGlass.castShadow = true;
+      group.add(frontGlass);
+      iPhoneComponents.push({ mesh: frontGlass, targetZ: 1.4 }); // Explode outward
+
+      // Component 2: Screen Matrix
+      const screenMat = new THREE.MeshStandardMaterial({ color: 0x111118, emissive: 0x223344, emissiveIntensity: 0.4 });
+      const screenPlane = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.4, 0.02), screenMat);
+      screenPlane.position.z = -0.05;
+      group.add(screenPlane);
+      iPhoneComponents.push({ mesh: screenPlane, targetZ: 0.7 });
+
+      // Component 3: Motherboard & Logic Board
+      const motherboard = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.6, 0.04), circuitMat);
+      motherboard.position.z = -0.12;
+      group.add(motherboard);
+      iPhoneComponents.push({ mesh: motherboard, targetZ: 0.0 });
+
+      // Component 4: Battery Pack
+      const battery = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.8, 0.08), batteryMat);
+      battery.position.set(-0.1, 0.2, -0.2);
+      group.add(battery);
+      iPhoneComponents.push({ mesh: battery, targetZ: -0.6 });
+
+      // Component 5: Aluminum Rear Housing
+      const rearCase = new THREE.Mesh(new THREE.BoxGeometry(1.65, 3.25, 0.1), aluminumMat);
+      rearCase.position.z = -0.3;
+      rearCase.castShadow = true;
+      group.add(rearCase);
+      iPhoneComponents.push({ mesh: rearCase, targetZ: -1.4 });
+
+      // Black Plastic Bottom Cap
+      const bottomCap = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.6, 0.11), plasticMat);
+      bottomCap.position.set(0, -1.33, -0.3);
+      group.add(bottomCap);
+      iPhoneComponents.push({ mesh: bottomCap, targetZ: -1.4 });
+
+      return group;
+    };
+
+    // MODEL 5: Glass Monolith Legacy (Chapter 5)
+    const createMonolithModel = () => {
+      const group = new THREE.Group();
+
+      const monolithMat = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.4,
+        roughness: 0.1,
+        metalness: 0.1,
+        transmission: 0.9,
+        ior: 1.5,
+        clearcoat: 1.0
+      });
+
+      const monolith = new THREE.Mesh(new THREE.BoxGeometry(2.0, 3.8, 0.4), monolithMat);
+      monolith.castShadow = true;
+      group.add(monolith);
+
+      // Inner Glowing Core
+      const coreMat = new THREE.MeshStandardMaterial({ 
+        color: 0xff6b00, 
+        emissive: 0xff6b00, 
+        emissiveIntensity: 1.2 
+      });
+      const core = new THREE.Mesh(new THREE.BoxGeometry(0.1, 3.2, 0.1), coreMat);
+      group.add(core);
+
+      return group;
+    };
+
+    // Instantiate all 5 models and group them
+    const model1 = createApple1Model();
+    const model2 = createMac128kModel();
+    const model3 = createIMacG3Model();
+    const model4 = createIPhoneModel();
+    const model5 = createMonolithModel();
+
+    const chapterModels = [model1, model2, model3, model4, model5];
+
+    chapterModels.forEach((m, idx) => {
+      m.position.x = 0;
+      m.position.y = 0;
+      m.position.z = 0;
+      m.visible = idx === 0;
+      mainGroup.add(m);
+    });
+
+    // --- 3. SCROLL-BASED TRANSFORMATIONS & SCENE POSITIONS ---
+    let currentSlide = 0;
+    let scrollProgress = 0;
+
+    // Define Camera & Model Rotations for each Slide
+    const slideStates = [
+      { camZ: 6.5, rotX: 0.3, rotY: -0.5, posX: 1.2 },  // Slide 1 (1976)
+      { camZ: 6.0, rotX: 0.1, rotY: 0.6, posX: -1.3 },   // Slide 2 (1984)
+      { camZ: 5.8, rotX: 0.2, rotY: -0.8, posX: 1.3 },  // Slide 3 (1997)
+      { camZ: 6.2, rotX: 0.15, rotY: 0.4, posX: -1.2 },  // Slide 4 (2007)
+      { camZ: 6.5, rotX: 0.0, rotY: 0.0, posX: 0.0 }     // Slide 5 (Legacy)
+    ];
+
+    // Mouse Tilt Interaction Setup
+    const mouse = { x: 0, y: 0, targetX: 0, targetY: 0 };
+    window.addEventListener('mousemove', (e) => {
+      mouse.targetX = (e.clientX / window.innerWidth - 0.5) * 0.5;
+      mouse.targetY = (e.clientY / window.innerHeight - 0.5) * 0.5;
+    });
+
+    // Handle Window Resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // --- 4. SCRAMBLE TEXT EFFECT IMPLEMENTATION ---
+    const chars = '!<>-_\\/[]{}—=+*^?#________';
+    const scrambleElements = document.querySelectorAll('.scramble-text');
+
+    const scrambleText = (el) => {
+      const originalText = el.getAttribute('data-value') || el.innerText;
+      let iteration = 0;
+      clearInterval(el.interval);
+
+      el.interval = setInterval(() => {
+        el.innerText = originalText
+          .split('')
+          .map((char, index) => {
+            if (index < iteration) return originalText[index];
+            return chars[Math.floor(Math.random() * chars.length)];
+          })
+          .join('');
+
+        if (iteration >= originalText.length) {
+          clearInterval(el.interval);
+        }
+        iteration += 1 / 2;
+      }, 30);
+    };
+
+    // IntersectionObserver for Triggering Scramble on Scroll (threshold 0.4)
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const scrambleEl = entry.target.querySelector('.scramble-text');
+          if (scrambleEl) scrambleText(scrambleEl);
+        }
+      });
+    }, { threshold: 0.4 });
+
+    document.querySelectorAll('section').forEach(section => observer.observe(section));
+
+    // --- 5. GSAP SCROLLTRIGGER INTEGRATION ---
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Update Progress Bar & Camera Smooth Transitions
+    ScrollTrigger.create({
+      trigger: 'main',
+      start: 'top top',
+      end: 'bottom bottom',
+      onUpdate: (self) => {
+        scrollProgress = self.progress;
+        document.getElementById('progress-bar').style.width = `${scrollProgress * 100}%`;
+
+        // Determine current slide index based on scroll position
+        const totalSlides = 5;
+        const rawIndex = scrollProgress * (totalSlides - 1);
+        const newSlideIndex = Math.min(Math.floor(rawIndex + 0.5), totalSlides - 1);
+
+        if (newSlideIndex !== currentSlide) {
+          // Switch active 3D model
+          chapterModels[currentSlide].visible = false;
+          currentSlide = newSlideIndex;
+          chapterModels[currentSlide].visible = true;
+
+          // Trigger Scramble Text manually on slide change
+          const activeSection = document.getElementById(`slide-${currentSlide + 1}`);
+          if (activeSection) {
+            const el = activeSection.querySelector('.scramble-text');
+            if (el) scrambleText(el);
+          }
+        }
+
+        // Exploded View Progress for Chapter 4 (2007 iPhone)
+        if (currentSlide === 3) {
+          // Calculate local progress inside slide 4
+          const slide4Start = 3 / 4;
+          const slide4LocalProgress = Math.max(0, Math.min(1, (scrollProgress - 0.65) / 0.2));
+          
+          document.getElementById('explode-progress').style.width = `${slide4LocalProgress * 100}%`;
+
+          // Interpolate component positions for Exploded View
+          iPhoneComponents.forEach(comp => {
+            comp.mesh.position.z = GSAPLerp(0, comp.targetZ, slide4LocalProgress);
+          });
+        }
+      }
+    });
+
+    const GSAPLerp = (start, end, amt) => (1 - amt) * start + amt * end;
+
+    // --- 6. RENDER LOOP WITH CAMERA LERP (0.08) ---
+    const clock = new THREE.Clock();
+
+    const animate = () => {
+      requestAnimationFrame(animate);
+
+      const elapsedTime = clock.getElapsedTime();
+
+      // Mouse Parallax Lerp
+      mouse.x += (mouse.targetX - mouse.x) * 0.08;
+      mouse.y += (mouse.targetY - mouse.y) * 0.08;
+
+      // Target slide state transform
+      const targetState = slideStates[currentSlide];
+
+      // Lerp Camera & Object Rotations
+      mainGroup.rotation.x += (targetState.rotX + mouse.y * 0.5 - mainGroup.rotation.x) * 0.08;
+      mainGroup.rotation.y += (targetState.rotY + mouse.x * 0.8 - mainGroup.rotation.y) * 0.08;
+      mainGroup.position.x += (targetState.posX - mainGroup.position.x) * 0.08;
+
+      // Continuous subtle idle float animation
+      mainGroup.position.y = Math.sin(elapsedTime * 1.5) * 0.12;
+
+      // Render Scene
+      renderer.render(scene, camera);
+    };
+
+    // --- 7. QUOTE SWITCHER INTERACTION ---
+    const quotes = [
+      { text: '"Stay Hungry, Stay Foolish."', author: '— Stanford Commencement Speech, 2005' },
+      { text: '"Innovation distinguishes between a leader and a follower."', author: '— The Innovation Secrets of Steve Jobs' },
+      { text: '"The only way to do great work is to love what you do."', author: '— Commencement Address, 2005' },
+      { text: '"Design is not just what it looks like and feels like. Design is how it works."', author: '— New York Times Magazine, 2003' }
+    ];
+
+    let currentQuote = 0;
+    const quoteTextEl = document.getElementById('quote-text');
+    const quoteAuthorEl = document.getElementById('quote-author');
+    const nextQuoteBtn = document.getElementById('next-quote-btn');
+
+    if (nextQuoteBtn) {
+      nextQuoteBtn.addEventListener('click', () => {
+        currentQuote = (currentQuote + 1) % quotes.length;
+        gsap.to('#quote-card', { opacity: 0, y: -10, duration: 0.2, onComplete: () => {
+          quoteTextEl.innerText = quotes[currentQuote].text;
+          quoteAuthorEl.innerText = quotes[currentQuote].author;
+          gsap.to('#quote-card', { opacity: 1, y: 0, duration: 0.2 });
+        }});
+      });
+    }
+
+    // Start Animation Loop on Window Load
+    window.onload = () => {
+      animate();
+    };
+  </script>
+</body>
+</html>
